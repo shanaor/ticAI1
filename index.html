@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #00f2ff, #01c8d7);
+            background-size: 200% 200%;
+            animation: gradientFlow 6s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% {
+                background-position: 0% 0%;
+            }
+
+            100% {
+                background-position: 100% 100%;
+            }
+        }
+
+        #titl {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #tik {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            gap: 5px;
+            justify-content: center;
+        }
+
+        #tik button {
+            width: 100px;
+            height: 100px;
+            font-size: 36px;
+            cursor: pointer;
+            border: 2px solid black;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #tik button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #tik button.winner {
+            background-color: red;
+            color: white;
+        }
+
+        #win-message {
+            font-size: 24px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .ribbon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, red 50%);
+            animation: ribbon 1s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ribbon {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .reset-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #score-board {
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .reset-wins-button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="score-board">
+        <div>Player X Wins: <span id="x-wins">0</span></div>
+        <div>Player O Wins: <span id="o-wins">0</span></div>
+    </div>
+    <div id="titl">Let's play!</div>
+    <div id="tik"></div>
+    <div id="win-message"></div>
+    <div class="reset-button-container">
+        <button onclick="resetGame()">Reset Game</button>
+        <button class="reset-wins-button" onclick="resetWins()">Reset Wins</button>
+        <button onclick="startSinglePlayer()">Single Player Mode</button>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('tik');
+        const titleElement = document.getElementById('titl');
+        const xWinsElement = document.getElementById('x-wins');
+        const oWinsElement = document.getElementById('o-wins');
+
+        let currentPlayer = 'X';
+        let board = Array(9).fill(null);
+        let isGameActive = true;
+        let scores = { X: 0, O: 0 };
+        let isSinglePlayer = false;
+
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function initializeBoard() {
+            boardElement.innerHTML = '';
+            board.fill(null);
+            for (let i = 0; i < 9; i++) {
+                const button = document.createElement('button');
+                button.addEventListener('click', () => handleClick(i));
+                boardElement.appendChild(button);
+            }
+            updateStatus();
+            isGameActive = true;
+        }
+
+        function handleClick(index) {
+            if (board[index] || !isGameActive) return;
+            board[index] = currentPlayer;
+            updateBoard();
+            if (!checkWin()) switchPlayer();
+            if (isSinglePlayer && currentPlayer === 'O' && isGameActive) makeAIMove();
+        }
+
+        function updateBoard() {
+            boardElement.querySelectorAll('button').forEach((btn, i) => {
+                btn.textContent = board[i];
+            });
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function updateStatus() {
+            titleElement.textContent = `Player ${currentPlayer}'s turn`;
+        }
+
+        function checkWin() {
+            const winner = winConditions.find(([a, b, c]) => board[a] && board[a] === board[b] && board[a] === board[c]);
+            if (winner) {
+                endGame(board[winner[0]]);
+                highlightWin(winner);
+                return true;
+            }
+            if (board.every(cell => cell !== null)) {
+                titleElement.textContent = "It's a draw!";
+                isGameActive = false;
+                return true;
+            }
+            return false;
+        }
+
+        function endGame(winner) {
+            titleElement.textContent = `Winner is ${winner}!`;
+            isGameActive = false;
+            scores[winner]++;
+            xWinsElement.textContent = scores.X;
+            oWinsElement.textContent = scores.O;
+        }
+
+        function highlightWin([a, b, c]) {
+            [a, b, c].forEach(index => boardElement.children[index].classList.add('winner'));
+            const ribbon = document.createElement('div');
+            ribbon.classList.add('ribbon');
+            boardElement.appendChild(ribbon);
+        }
+
+        function resetGame() {
+            initializeBoard();
+            if (isSinglePlayer && currentPlayer === 'O') setTimeout(makeAIMove, 500); // Delay for AI to make move
+        }
+
+        function resetWins() {
+            scores = { X: 0, O: 0 };
+            xWinsElement.textContent = '0';
+            oWinsElement.textContent = '0';
+        }
+
+        function startSinglePlayer() {
+            isSinglePlayer = true;
+            currentPlayer = 'O';
+            resetGame();
+        }
+
+        function makeAIMove() {
+            const availableMoves = board.map((v, i) => (v === null ? i : null)).filter(v => v !== null);
+            const firstMoveOptions = [0, 2, 4, 6, 8];
+            const move = availableMoves.length === 9
+                ? firstMoveOptions[Math.floor(Math.random() * firstMoveOptions.length)]
+                : minimax(board, 'O').index;
+            board[move] = currentPlayer;
+            updateBoard();
+            if (!checkWin()) switchPlayer();
+        }
+
+        function minimax(newBoard, player) {
+            const availableMoves = newBoard.map((v, i) => (v === null ? i : null)).filter(v => v !== null);
+
+            const winner = winConditions.find(([a, b, c]) => newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]);
+            if (winner) return { score: newBoard[winner[0]] === 'O' ? 10 : -10 };
+            if (availableMoves.length === 0) return { score: 0 };
+
+            const moves = availableMoves.map(index => {
+                newBoard[index] = player;
+                const score = minimax(newBoard, player === 'O' ? 'X' : 'O').score;
+                newBoard[index] = null;
+                return { index, score };
+            });
+
+            return moves.reduce((bestMove, move) =>
+                (player === 'O' && move.score > bestMove.score) || (player === 'X' && move.score < bestMove.score)
+                    ? move
+                    : bestMove
+            );
+        }
+
+        initializeBoard();
+    </script>
+</body>
+
+</html>
